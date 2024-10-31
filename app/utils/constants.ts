@@ -6,8 +6,20 @@ export const MODIFICATIONS_TAG_NAME = 'bolt_file_modifications';
 export const MODEL_REGEX = /^\[Model: (.*?)\]\n\n/;
 export const DEFAULT_MODEL = 'claude-3-5-sonnet-20240620';
 export const DEFAULT_PROVIDER = 'Anthropic';
+export const PLATFORM: 'react' | 'django' = 'react';
 
 const staticModels: ModelInfo[] = [
+  { name: 'codeqwen:latest', label: 'CodeQwen', provider: 'Ollama' },
+  { name: 'qwen2.5-coder:7b', label: 'Qwen 2.5 Coder 7B', provider: 'Ollama' },
+  { name: 'deepseek-coder-v2:latest', label: 'Deepseek Coder V2', provider: 'Ollama' },
+  { name: 'mistral:latest', label: 'Mistral', provider: 'Ollama' },
+  { name: 'codellama:7b', label: 'CodeLlama 7B', provider: 'Ollama' },
+  { name: 'codellama:13b', label: 'CodeLlama 13B', provider: 'Ollama' },
+  { name: 'codellama:34b', label: 'CodeLlama 34B', provider: 'Ollama' },
+  { name: 'llama3.2-c1:latest', label: 'Llama 3.2 C1', provider: 'Ollama' },
+  { name: 'llama3.2-custom:latest', label: 'Llama 3.2 Custom', provider: 'Ollama' },
+  { name: 'llama3.2:latest', label: 'Llama 3.2', provider: 'Ollama' },
+  { name: 'llava:latest', label: 'LLaVA', provider: 'Ollama' },
   { name: 'claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
   { name: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI' },
   { name: 'anthropic/claude-3.5-sonnet', label: 'Anthropic: Claude 3.5 Sonnet (OpenRouter)', provider: 'OpenRouter' },
