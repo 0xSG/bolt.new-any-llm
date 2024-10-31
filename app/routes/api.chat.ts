@@ -35,12 +35,14 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         messages.push({ role: 'user', content: CONTINUE_PROMPT });
 
         const result = await streamText(messages, context.cloudflare.env, options);
+        console.log(result);
 
         return stream.switchSource(result.toAIStream());
       },
     };
 
     const result = await streamText(messages, context.cloudflare.env, options);
+    console.log(result);
 
     stream.switchSource(result.toAIStream());
 
