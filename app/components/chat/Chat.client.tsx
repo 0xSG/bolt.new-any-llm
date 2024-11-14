@@ -179,14 +179,14 @@ export const ChatImpl = memo(({ initialMessages, storeMessageHistory }: ChatProp
      */
     await workbenchStore.saveAllFiles();
 
-    const fileModifications = workbenchStore.getFileModifcations();
+    const modifications = workbenchStore.getFileModifications();
 
     chatStore.setKey('aborted', false);
 
     runAnimation();
 
-    if (fileModifications !== undefined) {
-      const diff = fileModificationsToHTML(fileModifications);
+    if (modifications !== undefined) {
+      const diff = fileModificationsToHTML(modifications);
 
       /**
        * If we have file modifications we append a new user message manually since we have to prefix

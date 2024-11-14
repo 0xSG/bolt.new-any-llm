@@ -299,3 +299,13 @@ const createArtifactElement: ElementFactory = (props) => {
 function camelToDashCase(input: string) {
   return input.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
+
+export interface Action {
+  type: 'file' | 'shell' | 'start';
+  filePath?: string;
+  content: string;
+  status?: 'running' | 'complete' | 'failed';
+  executed?: boolean;
+  abort?: () => void;
+  abortSignal?: AbortSignal;
+}

@@ -101,20 +101,14 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     workbenchStore.resetCurrentDocument();
   }, []);
 
-  const handleSyncFiles = useCallback(async () => {
-    setIsSyncing(true);
-
-    try {
-      const directoryHandle = await window.showDirectoryPicker();
-      await workbenchStore.syncFiles(directoryHandle);
-      toast.success('Files synced successfully');
-    } catch (error) {
-      console.error('Error syncing files:', error);
-      toast.error('Failed to sync files');
-    } finally {
-      setIsSyncing(false);
+  useEffect(() => {
+    if (chatStarted) {
+      workbenchStore.filesStore.initialize().catch((error: Error) => {
+        console.error('Failed to initialize file system:', error);
+        toast.error('Failed to initialize file system');
+      });
     }
-  }, []);
+  }, [chatStarted]);
 
   return (
     chatStarted && (
@@ -143,45 +137,16 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                     <PanelHeaderButton
                       className="mr-1 text-sm"
                       onClick={() => {
-                        workbenchStore.downloadZip();
+                        toast.info('Download functionality coming soon');
                       }}
                     >
                       <div className="i-ph:code" />
                       Download Code
                     </PanelHeaderButton>
-                    <PanelHeaderButton className="mr-1 text-sm" onClick={handleSyncFiles} disabled={isSyncing}>
-                      {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}
-                      {isSyncing ? 'Syncing...' : 'Sync Files'}
-                    </PanelHeaderButton>
                     <PanelHeaderButton
                       className="mr-1 text-sm"
                       onClick={() => {
-                        workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                      }}
-                    >
-                      <div className="i-ph:terminal" />
-                      Toggle Terminal
-                    </PanelHeaderButton>
-                    <PanelHeaderButton
-                      className="mr-1 text-sm"
-                      onClick={() => {
-                        const repoName = prompt("Please enter a name for your new GitHub repository:", "bolt-generated-project");
-                        if (!repoName) {
-                          alert("Repository name is required. Push to GitHub cancelled.");
-                          return;
-                        }
-                        const githubUsername = prompt("Please enter your GitHub username:");
-                        if (!githubUsername) {
-                          alert("GitHub username is required. Push to GitHub cancelled.");
-                          return;
-                        }
-                        const githubToken = prompt("Please enter your GitHub personal access token:");
-                        if (!githubToken) {
-                          alert("GitHub token is required. Push to GitHub cancelled.");
-                          return;
-                        }
-                        
-                      workbenchStore.pushToGitHub(repoName, githubUsername, githubToken);  
+                        toast.info('GitHub integration coming soon');
                       }}
                     >
                       <div className="i-ph:github-logo" />
@@ -230,13 +195,18 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
     )
   );
 });
+
 interface ViewProps extends HTMLMotionProps<'div'> {
-  children: JSX.Element;
+  children: React.ReactNode;
 }
 
 const View = memo(({ children, ...props }: ViewProps) => {
   return (
-    <motion.div className="absolute inset-0" transition={viewTransition} {...props}>
+    <motion.div 
+      className="absolute inset-0" 
+      transition={viewTransition} 
+      {...props}
+    >
       {children}
     </motion.div>
   );

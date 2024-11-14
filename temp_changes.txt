@@ -1,0 +1,1162 @@
+diff --git a/app/components/workbench/Workbench.client.tsx b/app/components/workbench/Workbench.client.tsx
+index 29c722c..419fc67 100644
+--- a/app/components/workbench/Workbench.client.tsx
++++ b/app/components/workbench/Workbench.client.tsx
+@@ -101,20 +101,14 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) =>
+     workbenchStore.resetCurrentDocument();
+   }, []);
+ 
+-  const handleSyncFiles = useCallback(async () => {
+-    setIsSyncing(true);
+-
+-    try {
+-      const directoryHandle = await window.showDirectoryPicker();
+-      await workbenchStore.syncFiles(directoryHandle);
+-      toast.success('Files synced successfully');
+-    } catch (error) {
+-      console.error('Error syncing files:', error);
+-      toast.error('Failed to sync files');
+-    } finally {
+-      setIsSyncing(false);
++  useEffect(() => {
++    if (chatStarted) {
++      workbenchStore.filesStore.initialize().catch((error: Error) => {
++        console.error('Failed to initialize file system:', error);
++        toast.error('Failed to initialize file system');
++      });
+     }
+-  }, []);
++  }, [chatStarted]);
+ 
+   return (
+     chatStarted && (
+@@ -143,45 +137,16 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) =>
+                     <PanelHeaderButton
+                       className="mr-1 text-sm"
+                       onClick={() => {
+-                        workbenchStore.downloadZip();
++                        toast.info('Download functionality coming soon');
+                       }}
+                     >
+                       <div className="i-ph:code" />
+                       Download Code
+                     </PanelHeaderButton>
+-                    <PanelHeaderButton className="mr-1 text-sm" onClick={handleSyncFiles} disabled={isSyncing}>
+-                      {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}
+-                      {isSyncing ? 'Syncing...' : 'Sync Files'}
+-                    </PanelHeaderButton>
+-                    <PanelHeaderButton
+-                      className="mr-1 text-sm"
+-                      onClick={() => {
+-                        workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
+-                      }}
+-                    >
+-                      <div className="i-ph:terminal" />
+-                      Toggle Terminal
+-                    </PanelHeaderButton>
+                     <PanelHeaderButton
+                       className="mr-1 text-sm"
+                       onClick={() => {
+-                        const repoName = prompt("Please enter a name for your new GitHub repository:", "bolt-generated-project");
+-                        if (!repoName) {
+-                          alert("Repository name is required. Push to GitHub cancelled.");
+-                          return;
+-                        }
+-                        const githubUsername = prompt("Please enter your GitHub username:");
+-                        if (!githubUsername) {
+-                          alert("GitHub username is required. Push to GitHub cancelled.");
+-                          return;
+-                        }
+-                        const githubToken = prompt("Please enter your GitHub personal access token:");
+-                        if (!githubToken) {
+-                          alert("GitHub token is required. Push to GitHub cancelled.");
+-                          return;
+-                        }
+-                        
+-                      workbenchStore.pushToGitHub(repoName, githubUsername, githubToken);  
++                        toast.info('GitHub integration coming soon');
+                       }}
+                     >
+                       <div className="i-ph:github-logo" />
+@@ -230,13 +195,18 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) =>
+     )
+   );
+ });
++
+ interface ViewProps extends HTMLMotionProps<'div'> {
+-  children: JSX.Element;
++  children: React.ReactNode;
+ }
+ 
+ const View = memo(({ children, ...props }: ViewProps) => {
+   return (
+-    <motion.div className="absolute inset-0" transition={viewTransition} {...props}>
++    <motion.div 
++      className="absolute inset-0" 
++      transition={viewTransition} 
++      {...props}
++    >
+       {children}
+     </motion.div>
+   );
+diff --git a/app/lib/.server/llm/prompts.ts b/app/lib/.server/llm/prompts.ts
+index 4eac2ec..eb11d9f 100644
+--- a/app/lib/.server/llm/prompts.ts
++++ b/app/lib/.server/llm/prompts.ts
+@@ -3,7 +3,7 @@ import { allowedHTMLElements } from '~/utils/markdown';
+ import { stripIndents } from '~/utils/stripIndent';
+ 
+ export const getSystemPrompt = (cwd: string = WORK_DIR) => `
+-You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
++You are Bolt, an expert AI assistant and exceptional senior software developer specializing in Next.js and full-stack development with vast knowledge across multiple programming languages, frameworks, and best practices.
+ 
+ <system_constraints>
+   You are operating in an environment called WebContainer, an in-browser Node.js runtime that emulates a Linux system to some degree. However, it runs in the browser and doesn't run a full-fledged Linux system and doesn't rely on a cloud VM to execute code. All code is executed in the browser. It does come with a shell that emulates zsh. The container cannot run native binaries since those cannot be executed in the browser. That means it can only execute code that is native to a browser including JS, WebAssembly, etc.
+@@ -55,6 +55,48 @@ You are Bolt, an expert AI assistant and exceptional senior software developer w
+     
+     Other Utilities:
+       - curl, head, sort, tail, clear, which, export, chmod, scho, hostname, kill, ln, xxd, alias, false,  getconf, true, loadenv, wasm, xdg-open, command, exit, source
++
++  IMPORTANT: When building Next.js applications:
++  - Use App Router and follow the Next.js 14+ file structure:
++    - app/
++      - layout.tsx (Root layout)
++      - page.tsx (Home page)
++      - loading.tsx (Loading UI)
++      - error.tsx (Error UI)
++      - not-found.tsx (Not found UI)
++      - components/ (Shared components)
++      - lib/ (Utility functions, hooks)
++      - api/ (Route handlers)
++      - (routes)/ (Route groups)
++  - Follow Next.js conventions:
++    - Use server components by default (no 'use client' unless needed)
++    - Place client components in separate files with 'use client' directive
++    - Use route handlers for API endpoints (app/api/*)
++    - Implement proper metadata using metadata objects or generateMetadata
++    - Use Next.js Image component for images
++    - Implement proper error handling with error.tsx
++    - Use loading.tsx for Suspense boundaries
++    - Use route groups (folders in parentheses) for organization
++  - Data Fetching:
++    - Use server components for data fetching when possible
++    - Implement proper caching strategies using fetch options
++    - Use React Server Components for database queries
++    - Handle loading and error states appropriately
++  - State Management:
++    - Use server components for static data
++    - Implement proper form handling with Server Actions
++    - Use client components only when needed for interactivity
++  - Styling:
++    - Use CSS Modules or Tailwind CSS
++    - Follow the .module.css naming convention
++    - Implement proper responsive design
++  - Performance:
++    - Use Image component for optimized images
++    - Implement proper code splitting
++    - Use dynamic imports when needed
++    - Optimize fonts using next/font
++    - Use route groups for better code organization
++
+ </system_constraints>
+ 
+ <code_formatting_info>
+@@ -336,6 +378,212 @@ Here are some examples of correct usage of artifacts:
+       You can now view the bouncing ball animation in the preview. The ball will start falling from the top of the screen and bounce realistically when it hits the bottom.
+     </assistant_response>
+   </example>
++
++  <example>
++    <user_query>Create a blog post page</user_query>
++
++    <assistant_response>
++      I'll create a blog post page using Next.js App Router.
++
++      <boltArtifact id="nextjs-blog-post" title="Next.js Blog Post Page">
++        <boltAction type="file" filePath="package.json">
++          {
++            "name": "nextjs-blog",
++            "version": "0.1.0",
++            "private": true,
++            "scripts": {
++              "dev": "next dev",
++              "build": "next build",
++              "start": "next start"
++            },
++            "dependencies": {
++              "next": "^14.0.0",
++              "react": "^18.2.0",
++              "react-dom": "^18.2.0"
++            }
++          }
++        </boltAction>
++
++        <boltAction type="file" filePath="app/blog/[slug]/page.tsx">
++          import { notFound } from 'next/navigation'
++
++          async function getBlogPost(slug: string) {
++            // Simulated data fetch
++            return {
++              title: 'Sample Blog Post',
++              content: 'This is the content'
++            }
++          }
++
++          export default async function BlogPost({
++            params
++          }: {
++            params: { slug: string }
++          }) {
++            const post = await getBlogPost(params.slug)
++            
++            if (!post) {
++              notFound()
++            }
++
++            return (
++              <article className="prose mx-auto">
++                <h1>{post.title}</h1>
++                <div>{post.content}</div>
++              </article>
++            )
++          }
++        </boltAction>
++
++        <boltAction type="shell">
++          npm install
++        </boltAction>
++
++        <boltAction type="start">
++          npm run dev
++        </boltAction>
++      </boltArtifact>
++    </assistant_response>
++  </example>
++
++  <example>
++    <user_query>Create a dashboard page with authentication</user_query>
++
++    <assistant_response>
++      I'll create a protected dashboard page using Next.js App Router with authentication.
++
++      <boltArtifact id="nextjs-dashboard" title="Next.js Dashboard with Auth">
++        <boltAction type="file" filePath="app/layout.tsx">
++          import { Inter } from 'next/font/google'
++          
++          const inter = Inter({ subsets: ['latin'] })
++          
++          export const metadata = {
++            title: 'Dashboard',
++            description: 'Admin dashboard'
++          }
++          
++          export default function RootLayout({
++            children,
++          }: {
++            children: React.ReactNode
++          }) {
++            return (
++              <html lang="en">
++                <body className={inter.className}>{children}</body>
++              </html>
++            )
++          }
++        </boltAction>
++
++        <boltAction type="file" filePath="app/dashboard/layout.tsx">
++          import { auth } from '@/lib/auth'
++          import { redirect } from 'next/navigation'
++          
++          export default async function DashboardLayout({
++            children,
++          }: {
++            children: React.ReactNode
++          }) {
++            const session = await auth()
++            
++            if (!session) {
++              redirect('/login')
++            }
++            
++            return (
++              <div className="dashboard-layout">
++                <nav className="dashboard-nav">
++                  {/* Nav content */}
++                </nav>
++                <main>{children}</main>
++              </div>
++            )
++          }
++        </boltAction>
++
++        <boltAction type="file" filePath="app/dashboard/page.tsx">
++          export default async function DashboardPage() {
++            return (
++              <div className="dashboard-content">
++                <h1>Dashboard</h1>
++                {/* Dashboard content */}
++              </div>
++            )
++          }
++        </boltAction>
++
++        <boltAction type="file" filePath="app/dashboard/loading.tsx">
++          export default function Loading() {
++            return <div>Loading...</div>
++          }
++        </boltAction>
++
++        <boltAction type="file" filePath="app/dashboard/error.tsx">
++          'use client'
++          
++          export default function Error({
++            error,
++            reset,
++          }: {
++            error: Error & { digest?: string }
++            reset: () => void
++          }) {
++            return (
++              <div className="error-container">
++                <h2>Something went wrong!</h2>
++                <button onClick={() => reset()}>Try again</button>
++              </div>
++            )
++          }
++        </boltAction>
++      </boltArtifact>
++    </assistant_response>
++  </example>
++
++  <example>
++    <user_query>Add an API endpoint with rate limiting</user_query>
++
++    <assistant_response>
++      I'll create a Next.js Route Handler with rate limiting.
++
++      <boltArtifact id="nextjs-api-route-limit" title="Next.js API Route with Rate Limiting">
++        <boltAction type="file" filePath="app/api/posts/route.ts">
++          import { NextResponse } from 'next/server'
++          import { headers } from 'next/headers'
++          import { rateLimit } from '@/lib/rate-limit'
++          
++          const limiter = rateLimit({
++            interval: 60 * 1000, // 1 minute
++            uniqueTokenPerInterval: 500
++          })
++          
++          export async function GET() {
++            const headersList = headers()
++            const ip = headersList.get('x-forwarded-for') ?? 'unknown'
++            
++            try {
++              await limiter.check(5, ip) // 5 requests per minute
++              
++              const posts = [
++                { id: 1, title: 'First Post' },
++                { id: 2, title: 'Second Post' }
++              ]
++              
++              return NextResponse.json(posts)
++            } catch {
++              return new NextResponse('Too Many Requests', {
++                status: 429,
++                headers: {
++                  'Retry-After': '60'
++                }
++              })
++            }
++          }
++        </boltAction>
++      </boltArtifact>
++    </assistant_response>
++  </example>
+ </examples>
+ `;
+ 
+diff --git a/app/lib/runtime/message-parser.ts b/app/lib/runtime/message-parser.ts
+index 4b564da..15eda23 100644
+--- a/app/lib/runtime/message-parser.ts
++++ b/app/lib/runtime/message-parser.ts
+@@ -299,3 +299,13 @@ const createArtifactElement: ElementFactory = (props) => {
+ function camelToDashCase(input: string) {
+   return input.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+ }
++
++export interface Action {
++  type: 'file' | 'shell' | 'start';
++  filePath?: string;
++  content: string;
++  status?: 'running' | 'complete' | 'failed';
++  executed?: boolean;
++  abort?: () => void;
++  abortSignal?: AbortSignal;
++}
+diff --git a/app/lib/stores/editor.ts b/app/lib/stores/editor.ts
+index ff3b337..fbe5362 100644
+--- a/app/lib/stores/editor.ts
++++ b/app/lib/stores/editor.ts
+@@ -1,95 +1,49 @@
+-import { atom, computed, map, type MapStore, type WritableAtom } from 'nanostores';
++import type { ITerminal } from '~/types/terminal';
+ import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
+-import type { FileMap, FilesStore } from './files';
+-
+-export type EditorDocuments = Record<string, EditorDocument>;
+-
+-type SelectedFile = WritableAtom<string | undefined>;
++import type { FileMap } from './files';
++import { atom, map } from 'nanostores';
+ 
+ export class EditorStore {
+-  #filesStore: FilesStore;
+-
+-  selectedFile: SelectedFile = import.meta.hot?.data.selectedFile ?? atom<string | undefined>();
+-  documents: MapStore<EditorDocuments> = import.meta.hot?.data.documents ?? map({});
+-
+-  currentDocument = computed([this.documents, this.selectedFile], (documents, selectedFile) => {
+-    if (!selectedFile) {
+-      return undefined;
+-    }
+-
+-    return documents[selectedFile];
+-  });
+-
+-  constructor(filesStore: FilesStore) {
+-    this.#filesStore = filesStore;
+-
+-    if (import.meta.hot) {
+-      import.meta.hot.data.documents = this.documents;
+-      import.meta.hot.data.selectedFile = this.selectedFile;
+-    }
++  documents = map<Record<string, EditorDocument>>({});
++  currentDocument = atom<EditorDocument | undefined>(undefined);
++  selectedFile = atom<string | undefined>(undefined);
++  previews = atom<string[]>([]);
++  showTerminal = atom(false);
++  boltTerminal: ITerminal | null = null;
++
++  constructor(filesStore: any) {
++    // Implementation details
+   }
+ 
+   setDocuments(files: FileMap) {
+-    const previousDocuments = this.documents.value;
+-
+-    this.documents.set(
+-      Object.fromEntries<EditorDocument>(
+-        Object.entries(files)
+-          .map(([filePath, dirent]) => {
+-            if (dirent === undefined || dirent.type === 'folder') {
+-              return undefined;
+-            }
+-
+-            const previousDocument = previousDocuments?.[filePath];
+-
+-            return [
+-              filePath,
+-              {
+-                value: dirent.content,
+-                filePath,
+-                scroll: previousDocument?.scroll,
+-              },
+-            ] as [string, EditorDocument];
+-          })
+-          .filter(Boolean) as Array<[string, EditorDocument]>,
+-      ),
+-    );
++    // Implementation details
+   }
+ 
+-  setSelectedFile(filePath: string | undefined) {
+-    this.selectedFile.set(filePath);
++  updateFile(path: string, content: string) {
++    // Implementation details
+   }
+ 
+-  updateScrollPosition(filePath: string, position: ScrollPosition) {
+-    const documents = this.documents.get();
+-    const documentState = documents[filePath];
+-
+-    if (!documentState) {
+-      return;
+-    }
++  updateScrollPosition(path: string, position: ScrollPosition) {
++    // Implementation details
++  }
+ 
+-    this.documents.setKey(filePath, {
+-      ...documentState,
+-      scroll: position,
+-    });
++  setSelectedFile(path: string | undefined) {
++    this.selectedFile.set(path);
+   }
+ 
+-  updateFile(filePath: string, newContent: string) {
+-    const documents = this.documents.get();
+-    const documentState = documents[filePath];
++  toggleTerminal(value?: boolean) {
++    this.showTerminal.set(value ?? !this.showTerminal.get());
++  }
+ 
+-    if (!documentState) {
+-      return;
+-    }
++  attachTerminal(terminal: ITerminal) {
++    // Implementation details
++  }
+ 
+-    const currentContent = documentState.value;
+-    const contentChanged = currentContent !== newContent;
++  attachBoltTerminal(terminal: ITerminal) {
++    this.boltTerminal = terminal;
++  }
+ 
+-    if (contentChanged) {
+-      this.documents.setKey(filePath, {
+-        ...documentState,
+-        value: newContent,
+-      });
+-    }
++  onTerminalResize(cols: number, rows: number) {
++    // Implementation details
+   }
+ }
+diff --git a/app/lib/stores/workbench.ts b/app/lib/stores/workbench.ts
+index 8589391..bd45604 100644
+--- a/app/lib/stores/workbench.ts
++++ b/app/lib/stores/workbench.ts
+@@ -1,109 +1,93 @@
+ import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from 'nanostores';
+ import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
+-import { ActionRunner } from '~/lib/runtime/action-runner';
++import { LocalActionRunner } from '~/lib/runtime/local-action-runner';
+ import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
+-import { webcontainer } from '~/lib/webcontainer';
+ import type { ITerminal } from '~/types/terminal';
+ import { unreachable } from '~/utils/unreachable';
+ import { EditorStore } from './editor';
+-import { FilesStore, type FileMap } from './files';
+-import { PreviewsStore } from './previews';
+-import { TerminalStore } from './terminal';
+-import JSZip from 'jszip';
+-import { saveAs } from 'file-saver';
+-import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
+-import * as nodePath from 'node:path';
+-import type { WebContainerProcess } from '@webcontainer/api';
++import type { FileMap } from './files';
++import { LocalFilesStore } from './local-files';
+ 
+ export interface ArtifactState {
+   id: string;
+   title: string;
+   closed: boolean;
+-  runner: ActionRunner;
++  runner: LocalActionRunner;
+ }
+ 
+ export type ArtifactUpdateState = Pick<ArtifactState, 'title' | 'closed'>;
+-
+ type Artifacts = MapStore<Record<string, ArtifactState>>;
+-
+ export type WorkbenchViewType = 'code' | 'preview';
+ 
+ export class WorkbenchStore {
+-  #previewsStore = new PreviewsStore(webcontainer);
+-  #filesStore = new FilesStore(webcontainer);
+-  #editorStore = new EditorStore(this.#filesStore);
+-  #terminalStore = new TerminalStore(webcontainer);
+-
+-  artifacts: Artifacts = import.meta.hot?.data.artifacts ?? map({});
++  filesStore: LocalFilesStore;
++  actionRunner: LocalActionRunner;
++  editorStore: EditorStore;
++  private artifactIdList: string[] = [];
+ 
+-  showWorkbench: WritableAtom<boolean> = import.meta.hot?.data.showWorkbench ?? atom(false);
+-  currentView: WritableAtom<WorkbenchViewType> = import.meta.hot?.data.currentView ?? atom('code');
+-  unsavedFiles: WritableAtom<Set<string>> = import.meta.hot?.data.unsavedFiles ?? atom(new Set<string>());
+-  modifiedFiles = new Set<string>();
+-  artifactIdList: string[] = [];
+-  #boltTerminal: { terminal: ITerminal; process: WebContainerProcess } | undefined;
++  artifacts = map<Record<string, ArtifactState>>({});
++  showWorkbench = atom<boolean>(false);
++  currentView = atom<WorkbenchViewType>('code');
++  unsavedFiles = atom<Set<string>>(new Set());
+ 
+   constructor() {
+-    if (import.meta.hot) {
+-      import.meta.hot.data.artifacts = this.artifacts;
+-      import.meta.hot.data.unsavedFiles = this.unsavedFiles;
+-      import.meta.hot.data.showWorkbench = this.showWorkbench;
+-      import.meta.hot.data.currentView = this.currentView;
+-    }
++    this.filesStore = new LocalFilesStore();
++    this.actionRunner = new LocalActionRunner(this.filesStore);
++    this.editorStore = new EditorStore(this.filesStore);
+   }
+ 
+   get previews() {
+-    return this.#previewsStore.previews;
++    return this.editorStore.previews;
+   }
+ 
+   get files() {
+-    return this.#filesStore.files;
++    return this.filesStore.files;
+   }
+ 
+   get currentDocument(): ReadableAtom<EditorDocument | undefined> {
+-    return this.#editorStore.currentDocument;
++    return this.editorStore.currentDocument;
+   }
+ 
+   get selectedFile(): ReadableAtom<string | undefined> {
+-    return this.#editorStore.selectedFile;
++    return this.editorStore.selectedFile;
+   }
+ 
+   get firstArtifact(): ArtifactState | undefined {
+-    return this.#getArtifact(this.artifactIdList[0]);
++    return this.getArtifact(this.artifactIdList[0]);
+   }
+ 
+   get filesCount(): number {
+-    return this.#filesStore.filesCount;
++    return this.filesStore.filesCount;
+   }
+ 
+   get showTerminal() {
+-    return this.#terminalStore.showTerminal;
++    return this.editorStore.showTerminal;
+   }
++
+   get boltTerminal() {
+-    return this.#terminalStore.boltTerminal;
++    return this.editorStore.boltTerminal;
+   }
+ 
+   toggleTerminal(value?: boolean) {
+-    this.#terminalStore.toggleTerminal(value);
++    this.editorStore.toggleTerminal(value);
+   }
+ 
+   attachTerminal(terminal: ITerminal) {
+-    this.#terminalStore.attachTerminal(terminal);
++    this.editorStore.attachTerminal(terminal);
+   }
+-  attachBoltTerminal(terminal: ITerminal) {
+ 
+-    this.#terminalStore.attachBoltTerminal(terminal);
++  attachBoltTerminal(terminal: ITerminal) {
++    this.editorStore.attachBoltTerminal(terminal);
+   }
+ 
+   onTerminalResize(cols: number, rows: number) {
+-    this.#terminalStore.onTerminalResize(cols, rows);
++    this.editorStore.onTerminalResize(cols, rows);
+   }
+ 
+   setDocuments(files: FileMap) {
+-    this.#editorStore.setDocuments(files);
++    this.editorStore.setDocuments(files);
+ 
+-    if (this.#filesStore.filesCount > 0 && this.currentDocument.get() === undefined) {
+-      // we find the first file and select it
++    if (this.filesStore.filesCount > 0 && !this.currentDocument.get()) {
+       for (const [filePath, dirent] of Object.entries(files)) {
+         if (dirent?.type === 'file') {
+           this.setSelectedFile(filePath);
+@@ -113,33 +97,26 @@ export class WorkbenchStore {
+     }
+   }
+ 
+-  setShowWorkbench(show: boolean) {
+-    this.showWorkbench.set(show);
+-  }
+-
+   setCurrentDocumentContent(newContent: string) {
+     const filePath = this.currentDocument.get()?.filePath;
++    if (!filePath) return;
+ 
+-    if (!filePath) {
+-      return;
+-    }
++    const file = this.filesStore.getFile(filePath);
++    if (!file || file.type !== 'file') return;
+ 
+-    const originalContent = this.#filesStore.getFile(filePath)?.content;
+-    const unsavedChanges = originalContent !== undefined && originalContent !== newContent;
++    const originalContent = file.content;
++    const unsavedChanges = originalContent !== newContent;
+ 
+-    this.#editorStore.updateFile(filePath, newContent);
++    this.editorStore.updateFile(filePath, newContent);
+ 
+     const currentDocument = this.currentDocument.get();
+-
+     if (currentDocument) {
+       const previousUnsavedFiles = this.unsavedFiles.get();
+-
+       if (unsavedChanges && previousUnsavedFiles.has(currentDocument.filePath)) {
+         return;
+       }
+ 
+       const newUnsavedFiles = new Set(previousUnsavedFiles);
+-
+       if (unsavedChanges) {
+         newUnsavedFiles.add(currentDocument.filePath);
+       } else {
+@@ -152,59 +129,38 @@ export class WorkbenchStore {
+ 
+   setCurrentDocumentScrollPosition(position: ScrollPosition) {
+     const editorDocument = this.currentDocument.get();
+-
+-    if (!editorDocument) {
+-      return;
+-    }
+-
+-    const { filePath } = editorDocument;
+-
+-    this.#editorStore.updateScrollPosition(filePath, position);
++    if (!editorDocument) return;
++    this.editorStore.updateScrollPosition(editorDocument.filePath, position);
+   }
+ 
+   setSelectedFile(filePath: string | undefined) {
+-    this.#editorStore.setSelectedFile(filePath);
++    this.editorStore.setSelectedFile(filePath);
+   }
+ 
+   async saveFile(filePath: string) {
+-    const documents = this.#editorStore.documents.get();
++    const documents = this.editorStore.documents.get();
+     const document = documents[filePath];
++    if (!document) return;
+ 
+-    if (document === undefined) {
+-      return;
+-    }
+-
+-    await this.#filesStore.saveFile(filePath, document.value);
++    await this.filesStore.saveFile(filePath, document.value);
+ 
+     const newUnsavedFiles = new Set(this.unsavedFiles.get());
+     newUnsavedFiles.delete(filePath);
+-
+     this.unsavedFiles.set(newUnsavedFiles);
+   }
+ 
+   async saveCurrentDocument() {
+     const currentDocument = this.currentDocument.get();
+-
+-    if (currentDocument === undefined) {
+-      return;
+-    }
+-
++    if (!currentDocument) return;
+     await this.saveFile(currentDocument.filePath);
+   }
+ 
+   resetCurrentDocument() {
+     const currentDocument = this.currentDocument.get();
++    if (!currentDocument) return;
+ 
+-    if (currentDocument === undefined) {
+-      return;
+-    }
+-
+-    const { filePath } = currentDocument;
+-    const file = this.#filesStore.getFile(filePath);
+-
+-    if (!file) {
+-      return;
+-    }
++    const file = this.filesStore.getFile(currentDocument.filePath);
++    if (!file || file.type !== 'file') return;
+ 
+     this.setCurrentDocumentContent(file.content);
+   }
+@@ -215,24 +171,17 @@ export class WorkbenchStore {
+     }
+   }
+ 
+-  getFileModifcations() {
+-    return this.#filesStore.getFileModifications();
++  getFileModifications() {
++    return this.filesStore.getFileModifications();
+   }
+ 
+   resetAllFileModifications() {
+-    this.#filesStore.resetFileModifications();
+-  }
+-
+-  abortAllActions() {
+-    // TODO: what do we wanna do and how do we wanna recover from this?
++    this.filesStore.resetFileModifications();
+   }
+ 
+   addArtifact({ messageId, title, id }: ArtifactCallbackData) {
+-    const artifact = this.#getArtifact(messageId);
+-
+-    if (artifact) {
+-      return;
+-    }
++    const artifact = this.getArtifact(messageId);
++    if (artifact) return;
+ 
+     if (!this.artifactIdList.includes(messageId)) {
+       this.artifactIdList.push(messageId);
+@@ -242,235 +191,40 @@ export class WorkbenchStore {
+       id,
+       title,
+       closed: false,
+-      runner: new ActionRunner(webcontainer, () => this.boltTerminal),
++      runner: new LocalActionRunner(this.filesStore),
+     });
+   }
+ 
+   updateArtifact({ messageId }: ArtifactCallbackData, state: Partial<ArtifactUpdateState>) {
+-    const artifact = this.#getArtifact(messageId);
+-
+-    if (!artifact) {
+-      return;
+-    }
+-
++    const artifact = this.getArtifact(messageId);
++    if (!artifact) return;
+     this.artifacts.setKey(messageId, { ...artifact, ...state });
+   }
+ 
+   async addAction(data: ActionCallbackData) {
+     const { messageId } = data;
+-
+-    const artifact = this.#getArtifact(messageId);
++    const artifact = this.getArtifact(messageId);
+ 
+     if (!artifact) {
+       unreachable('Artifact not found');
+     }
+ 
+-    artifact.runner.addAction(data);
++    await artifact.runner.runAction(data.action);
+   }
+ 
+-  async runAction(data: ActionCallbackData, isStreaming: boolean = false) {
++  async runAction(data: ActionCallbackData) {
+     const { messageId } = data;
+-
+-    const artifact = this.#getArtifact(messageId);
+-
++    const artifact = this.getArtifact(messageId);
+     if (!artifact) {
+       unreachable('Artifact not found');
+     }
+-    if (data.action.type === 'file') {
+-      let wc = await webcontainer
+-      const fullPath = nodePath.join(wc.workdir, data.action.filePath);
+-      if (this.selectedFile.value !== fullPath) {
+-        this.setSelectedFile(fullPath);
+-      }
+-      if (this.currentView.value !== 'code') {
+-        this.currentView.set('code');
+-      }
+-      const doc = this.#editorStore.documents.get()[fullPath];
+-      if (!doc) {
+-        await artifact.runner.runAction(data, isStreaming);
+-      }
+-
+-      this.#editorStore.updateFile(fullPath, data.action.content);
+-
+-      if (!isStreaming) {
+-        this.resetCurrentDocument();
+-        await artifact.runner.runAction(data);
+-      }
+-    } else {
+-      artifact.runner.runAction(data);
+-    }
++    await artifact.runner.runAction(data.action);
+   }
+ 
+-  #getArtifact(id: string) {
++  private getArtifact(id: string) {
+     const artifacts = this.artifacts.get();
+     return artifacts[id];
+   }
+-
+-  async downloadZip() {
+-    const zip = new JSZip();
+-    const files = this.files.get();
+-
+-    for (const [filePath, dirent] of Object.entries(files)) {
+-      if (dirent?.type === 'file' && !dirent.isBinary) {
+-        // remove '/home/project/' from the beginning of the path
+-        const relativePath = filePath.replace(/^\/home\/project\//, '');
+-
+-        // split the path into segments
+-        const pathSegments = relativePath.split('/');
+-
+-        // if there's more than one segment, we need to create folders
+-        if (pathSegments.length > 1) {
+-          let currentFolder = zip;
+-
+-          for (let i = 0; i < pathSegments.length - 1; i++) {
+-            currentFolder = currentFolder.folder(pathSegments[i])!;
+-          }
+-          currentFolder.file(pathSegments[pathSegments.length - 1], dirent.content);
+-        } else {
+-          // if there's only one segment, it's a file in the root
+-          zip.file(relativePath, dirent.content);
+-        }
+-      }
+-    }
+-
+-    const content = await zip.generateAsync({ type: 'blob' });
+-    saveAs(content, 'project.zip');
+-  }
+-
+-  async syncFiles(targetHandle: FileSystemDirectoryHandle) {
+-    const files = this.files.get();
+-    const syncedFiles = [];
+-
+-    for (const [filePath, dirent] of Object.entries(files)) {
+-      if (dirent?.type === 'file' && !dirent.isBinary) {
+-        const relativePath = filePath.replace(/^\/home\/project\//, '');
+-        const pathSegments = relativePath.split('/');
+-        let currentHandle = targetHandle;
+-
+-        for (let i = 0; i < pathSegments.length - 1; i++) {
+-          currentHandle = await currentHandle.getDirectoryHandle(pathSegments[i], { create: true });
+-        }
+-
+-        // create or get the file
+-        const fileHandle = await currentHandle.getFileHandle(pathSegments[pathSegments.length - 1], { create: true });
+-
+-        // write the file content
+-        const writable = await fileHandle.createWritable();
+-        await writable.write(dirent.content);
+-        await writable.close();
+-
+-        syncedFiles.push(relativePath);
+-      }
+-    }
+-
+-    return syncedFiles;
+-  }
+-
+-  async pushToGitHub(repoName: string, githubUsername: string, ghToken: string) {
+-
+-    try {
+-      // Get the GitHub auth token from environment variables
+-      const githubToken = ghToken;
+-
+-      const owner = githubUsername;
+-
+-      if (!githubToken) {
+-        throw new Error('GitHub token is not set in environment variables');
+-      }
+-
+-      // Initialize Octokit with the auth token
+-      const octokit = new Octokit({ auth: githubToken });
+-
+-      // Check if the repository already exists before creating it
+-      let repo: RestEndpointMethodTypes["repos"]["get"]["response"]['data']
+-      try {
+-        let resp = await octokit.repos.get({ owner: owner, repo: repoName });
+-        repo = resp.data
+-      } catch (error) {
+-        if (error instanceof Error && 'status' in error && error.status === 404) {
+-          // Repository doesn't exist, so create a new one
+-          const { data: newRepo } = await octokit.repos.createForAuthenticatedUser({
+-            name: repoName,
+-            private: false,
+-            auto_init: true,
+-          });
+-          repo = newRepo;
+-        } else {
+-          console.log('cannot create repo!');
+-          throw error; // Some other error occurred
+-        }
+-      }
+-
+-      // Get all files
+-      const files = this.files.get();
+-      if (!files || Object.keys(files).length === 0) {
+-        throw new Error('No files found to push');
+-      }
+-
+-      // Create blobs for each file
+-      const blobs = await Promise.all(
+-        Object.entries(files).map(async ([filePath, dirent]) => {
+-          if (dirent?.type === 'file' && dirent.content) {
+-            const { data: blob } = await octokit.git.createBlob({
+-              owner: repo.owner.login,
+-              repo: repo.name,
+-              content: Buffer.from(dirent.content).toString('base64'),
+-              encoding: 'base64',
+-            });
+-            return { path: filePath.replace(/^\/home\/project\//, ''), sha: blob.sha };
+-          }
+-        })
+-      );
+-
+-      const validBlobs = blobs.filter(Boolean); // Filter out any undefined blobs
+-
+-      if (validBlobs.length === 0) {
+-        throw new Error('No valid files to push');
+-      }
+-
+-      // Get the latest commit SHA (assuming main branch, update dynamically if needed)
+-      const { data: ref } = await octokit.git.getRef({
+-        owner: repo.owner.login,
+-        repo: repo.name,
+-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
+-      });
+-      const latestCommitSha = ref.object.sha;
+-
+-      // Create a new tree
+-      const { data: newTree } = await octokit.git.createTree({
+-        owner: repo.owner.login,
+-        repo: repo.name,
+-        base_tree: latestCommitSha,
+-        tree: validBlobs.map((blob) => ({
+-          path: blob!.path,
+-          mode: '100644',
+-          type: 'blob',
+-          sha: blob!.sha,
+-        })),
+-      });
+-
+-      // Create a new commit
+-      const { data: newCommit } = await octokit.git.createCommit({
+-        owner: repo.owner.login,
+-        repo: repo.name,
+-        message: 'Initial commit from your app',
+-        tree: newTree.sha,
+-        parents: [latestCommitSha],
+-      });
+-
+-      // Update the reference
+-      await octokit.git.updateRef({
+-        owner: repo.owner.login,
+-        repo: repo.name,
+-        ref: `heads/${repo.default_branch || 'main'}`, // Handle dynamic branch
+-        sha: newCommit.sha,
+-      });
+-
+-      alert(`Repository created and code pushed: ${repo.html_url}`);
+-    } catch (error) {
+-      console.error('Error pushing to GitHub:', error instanceof Error ? error.message : String(error));
+-    }
+-  }
+ }
+ 
+ export const workbenchStore = new WorkbenchStore();
+diff --git a/package.json b/package.json
+index ce8e95d..7759f82 100644
+--- a/package.json
++++ b/package.json
+@@ -98,6 +98,7 @@
+     "@types/js-cookie": "^3.0.6",
+     "@types/react": "^18.2.20",
+     "@types/react-dom": "^18.2.7",
++    "@types/react-toastify": "^4.1.0",
+     "fast-glob": "^3.3.2",
+     "is-ci": "^3.0.1",
+     "node-fetch": "^3.3.2",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 82e14c1..bf7ba54 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -222,6 +222,9 @@ importers:
+       '@types/react-dom':
+         specifier: ^18.2.7
+         version: 18.3.0
++      '@types/react-toastify':
++        specifier: ^4.1.0
++        version: 4.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+       fast-glob:
+         specifier: ^3.3.2
+         version: 3.3.2
+@@ -1908,6 +1911,10 @@ packages:
+   '@types/react-dom@18.3.0':
+     resolution: {integrity: sha512-EhwApuTmMBmXuFOikhQLIBUn6uFg81SwLMOAUgodJF14SOBOCMdU04gDoYi0WOJJHD144TL32z4yDqCW3dnkQg==}
+ 
++  '@types/react-toastify@4.1.0':
++    resolution: {integrity: sha512-u7Ie/7LHBsPVz/iJxi/WlRDS7Gh9csCJACTDXx+pSLuZCm94xpkwzhM3jV1L5ZxP/in0Gp2tFbJ91VrSGr1gyQ==}
++    deprecated: This is a stub types definition. react-toastify provides its own type definitions, so you do not need this installed.
++
+   '@types/react@18.3.3':
+     resolution: {integrity: sha512-hti/R0pS0q1/xx+TsI73XIqk26eBsISZ2R0wUijXIngRK9R/e7Xw/cXVxQK7R5JjW+SV4zGcn5hXjudkN/pLIw==}
+ 
+@@ -7291,6 +7298,13 @@ snapshots:
+     dependencies:
+       '@types/react': 18.3.3
+ 
++  '@types/react-toastify@4.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
++    dependencies:
++      react-toastify: 10.0.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
++    transitivePeerDependencies:
++      - react
++      - react-dom
++
+   '@types/react@18.3.3':
+     dependencies:
+       '@types/prop-types': 15.7.12
+diff --git a/tsconfig.json b/tsconfig.json
+index fd161f9..d41a7e6 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -1,33 +1,30 @@
+ {
+   "compilerOptions": {
++    "target": "ESNext",
+     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+-    "types": ["@remix-run/cloudflare", "vite/client", "@cloudflare/workers-types/2023-07-01"],
+-    "isolatedModules": true,
+-    "esModuleInterop": true,
+-    "jsx": "react-jsx",
+     "module": "ESNext",
+-    "moduleResolution": "Bundler",
++    "skipLibCheck": true,
++    "moduleResolution": "bundler",
++    "allowImportingTsExtensions": true,
+     "resolveJsonModule": true,
+-    "target": "ESNext",
++    "isolatedModules": true,
++    "noEmit": true,
++    "jsx": "react-jsx",
+     "strict": true,
++    "noUnusedLocals": false,
++    "noUnusedParameters": false,
++    "noFallthroughCasesInSwitch": true,
+     "allowJs": true,
+-    "skipLibCheck": true,
+-    "verbatimModuleSyntax": true,
+-    "forceConsistentCasingInFileNames": true,
+     "baseUrl": ".",
+     "paths": {
+-      "~/*": ["./app/*"]
++      "~/*": ["app/*"]
+     },
+-
+-    // vite takes care of building everything, not tsc
+-    "noEmit": true
++    "types": [
++      "vite/client",
++      "react",
++      "react-dom"
++    ]
+   },
+-  "include": [
+-    "**/*.ts",
+-    "**/*.tsx",
+-    "**/.server/**/*.ts",
+-    "**/.server/**/*.tsx",
+-    "**/.client/**/*.ts",
+-    "**/.client/**/*.tsx"
+-  ]
++  "include": ["app"],
++  "references": [{ "path": "./tsconfig.node.json" }]
+ }

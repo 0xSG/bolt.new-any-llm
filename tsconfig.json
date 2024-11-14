@@ -1,33 +1,30 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["@remix-run/cloudflare", "vite/client", "@cloudflare/workers-types/2023-07-01"],
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
     "target": "ESNext",
-    "strict": true,
-    "allowJs": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
     "skipLibCheck": true,
-    "verbatimModuleSyntax": true,
-    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["app/*"]
     },
-
-    // vite takes care of building everything, not tsc
-    "noEmit": true
+    "types": [
+      "vite/client",
+      "react",
+      "react-dom"
+    ]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/.server/**/*.ts",
-    "**/.server/**/*.tsx",
-    "**/.client/**/*.ts",
-    "**/.client/**/*.tsx"
-  ]
+  "include": ["app"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

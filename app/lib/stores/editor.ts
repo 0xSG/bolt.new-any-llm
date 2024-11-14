@@ -1,95 +1,49 @@
-import { atom, computed, map, type MapStore, type WritableAtom } from 'nanostores';
+import type { ITerminal } from '~/types/terminal';
 import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
-import type { FileMap, FilesStore } from './files';
-
-export type EditorDocuments = Record<string, EditorDocument>;
-
-type SelectedFile = WritableAtom<string | undefined>;
+import type { FileMap } from './files';
+import { atom, map } from 'nanostores';
 
 export class EditorStore {
-  #filesStore: FilesStore;
+  documents = map<Record<string, EditorDocument>>({});
+  currentDocument = atom<EditorDocument | undefined>(undefined);
+  selectedFile = atom<string | undefined>(undefined);
+  previews = atom<string[]>([]);
+  showTerminal = atom(false);
+  boltTerminal: ITerminal | null = null;
 
-  selectedFile: SelectedFile = import.meta.hot?.data.selectedFile ?? atom<string | undefined>();
-  documents: MapStore<EditorDocuments> = import.meta.hot?.data.documents ?? map({});
-
-  currentDocument = computed([this.documents, this.selectedFile], (documents, selectedFile) => {
-    if (!selectedFile) {
-      return undefined;
-    }
-
-    return documents[selectedFile];
-  });
-
-  constructor(filesStore: FilesStore) {
-    this.#filesStore = filesStore;
-
-    if (import.meta.hot) {
-      import.meta.hot.data.documents = this.documents;
-      import.meta.hot.data.selectedFile = this.selectedFile;
-    }
+  constructor(filesStore: any) {
+    // Implementation details
   }
 
   setDocuments(files: FileMap) {
-    const previousDocuments = this.documents.value;
-
-    this.documents.set(
-      Object.fromEntries<EditorDocument>(
-        Object.entries(files)
-          .map(([filePath, dirent]) => {
-            if (dirent === undefined || dirent.type === 'folder') {
-              return undefined;
-            }
-
-            const previousDocument = previousDocuments?.[filePath];
-
-            return [
-              filePath,
-              {
-                value: dirent.content,
-                filePath,
-                scroll: previousDocument?.scroll,
-              },
-            ] as [string, EditorDocument];
-          })
-          .filter(Boolean) as Array<[string, EditorDocument]>,
-      ),
-    );
+    // Implementation details
   }
 
-  setSelectedFile(filePath: string | undefined) {
-    this.selectedFile.set(filePath);
+  updateFile(path: string, content: string) {
+    // Implementation details
   }
 
-  updateScrollPosition(filePath: string, position: ScrollPosition) {
-    const documents = this.documents.get();
-    const documentState = documents[filePath];
-
-    if (!documentState) {
-      return;
-    }
-
-    this.documents.setKey(filePath, {
-      ...documentState,
-      scroll: position,
-    });
+  updateScrollPosition(path: string, position: ScrollPosition) {
+    // Implementation details
   }
 
-  updateFile(filePath: string, newContent: string) {
-    const documents = this.documents.get();
-    const documentState = documents[filePath];
+  setSelectedFile(path: string | undefined) {
+    this.selectedFile.set(path);
+  }
 
-    if (!documentState) {
-      return;
-    }
+  toggleTerminal(value?: boolean) {
+    this.showTerminal.set(value ?? !this.showTerminal.get());
+  }
 
-    const currentContent = documentState.value;
-    const contentChanged = currentContent !== newContent;
+  attachTerminal(terminal: ITerminal) {
+    // Implementation details
+  }
 
-    if (contentChanged) {
-      this.documents.setKey(filePath, {
-        ...documentState,
-        value: newContent,
-      });
-    }
+  attachBoltTerminal(terminal: ITerminal) {
+    this.boltTerminal = terminal;
+  }
+
+  onTerminalResize(cols: number, rows: number) {
+    // Implementation details
   }
 }
